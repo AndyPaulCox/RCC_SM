@@ -1,6 +1,6 @@
 ---
 title: "RCC SM Analysis"
-author: "Andy Cox"
+author: "Andy Cox and Evie Merinopoulou"
 date: "24/02/2017"
 output: html_document
 ---
@@ -9,60 +9,122 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message=FALSE)
 ```
 
-## Analyses of RCC Social Media Data
+## Data Mining and Analyses of RCC Social Media Data
 
 ```{r}
 #Clear workspace, set working directory and load packages
 rm(list=ls())
+library(quanteda)
+library(ggplot2)
 options(stringsAsFactors = FALSE)
 
 setwd("/Users/AndyC/Dropbox/rdata/RCCsocmed/RCC_SM_analysis_24022017")
 ```
+Posts were obtained from four Kidney Cancer Social Media sites
+*Daily Strength
+*Cancer Compass
+*Cancer Survivors Network
+*MacMillan Cancer 
 
-First objective is to do some preliminary cleaning of the posts and save as RDS 
+The posts obtained were only posts that were publically available for anyone to view and the data were not accessed by registering to the site in any way.
 
-```{r}
-# read in data removiong multibyte strings
-dat1<-read.csv("alldatafinal23022017v2.csv",header=TRUE,stringsAsFactors=FALSE,sep=",",
-               fileEncoding="latin1")
-#Intial cleaning of the body text
-  #remove excess whitespace
-dat1$body_text<-gsub("\\s+"," ",dat1$body_text)
-  #Remove backslashes
-dat1$body_text<-gsub("\"", "'",dat1$body_text)
+Before the posts can be used it is necessary to clean the posts standardise terms and correct typos.
+```{r eval=FALSE}
 
-#same for same for post_titles
-#remove excess whitespace
-dat1$bpost_titles<-gsub("\\s+"," ",dat1$post_titles)
-#Remove backslashes
-dat1$post_titles<-gsub("\"", "'",dat1$post_titles)
-dat1$post_titles<-gsub("RE:","",dat1$post_titles)
-dat1$post_titles<-tolower(dat1$post_titles)
+# #test text
+# dat44<-c("hell0, 3 my name don't is rcc","I have 3 got opdivo for my condition","its about the 3rd time","defintitely renal cell carcinoma","my lymph nodes are up","I have a big toe and adrenal gland","  \r\t my rcc was diagnosed and my rbc count","hello one tow bloating yesterday", "\t\tin the flush","one two renal cell carcinoma","i took inylta now","it happens alot","this is mispelled avistan","mispelled diagnoised")
+# 
+# socmed_correct<-function(x,dict_pth,first_use=0){
+# # This function cleans up social media text, corrects common mispellings and standardises drug names to the generic naming
+#   #Needs to be applied one tine for each dictionary
+# 
+#   dict_corr<-read.csv(dict_pth,header=TRUE,stringsAsFactors=FALSE,sep=",",
+#                       fileEncoding="latin1")
+#   #Just limit to those flagged for change
+#  dict_corr<-dict_corr[dict_corr$changed==1,]
+#   if(first_use==1){
+#  #Basic Cleaning of the data only on first use of function
+#   #Remove backslashes
+#   x<-gsub("\"", "'",x)
+#   x<-gsub("RE:","",x)
+#   x<-tolower(x)
+#   x<-gsub('[[:punct:]]', '', x) 
+#   #x<-gsub('[0-9]+', ' ', x)
+#   x<-gsub("re:","",x)
+#   }
+#   #remove excess whitespace
+#   x<-gsub("\\s+"," ",x)
+#   #Add whitespace to begining and end
+#   for(j in 1:length(x))x[j]<-paste0(" ",x[j]," ")
+#   #Apply Corrections
+#   for(i in 1:nrow(dict_corr))x<-gsub(paste0(" ",dict_corr[i,1]," "),paste0(" ",dict_corr[i,2]," "),x)
+#   return(x)
+# }
+# 
+# 
+# pth<-"/Users/AndyC/Dropbox/rdata/RCCsocmed/RCC_SM_analysis_24022017/final_data/alldatafinal23022017v2.csv"
+# #dat1<-readRDS(pth)
+# dat1<-read.csv(pth,header=TRUE,stringsAsFactors=FALSE,sep=",",
+#                       fileEncoding="latin1")
+# dat1$post_titles<-gsub("[\r\n\t]", "", dat1$post_titles)
+# dat1$body_text<-gsub("[\r\n\t]", "", dat1$body_text)
+# 
+# #Paths to the dictionaries
+#   pth_drug<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/drug_names/drug_name_standardisation_dict_02032017.csv"
+#   pth_SM_corrections<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/sm_corrections_dict/SM_corrections_dict_02032017.csv"
+#   pth_AE<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+#  pth_bodyP<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/body_parts/body_parts_dict.csv"
+#  pth_terms<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/phrases/phrase_term_dict.csv"
+# 
+# dat1$post_titles<-socmed_correct(dat1$post_titles,pth_SM_corrections,first_use=1)
+# dat1$body_text<-socmed_correct(dat1$body_text,pth_SM_corrections,first_use=1)
+#  
+# dat1$post_titles<-socmed_correct(dat1$post_titles,pth_drug)
+# dat1$body_text<-socmed_correct(dat1$body_text,pth_drug)
+# 
+# dat1$post_titles<-socmed_correct(dat1$post_titles,pth_AE)
+# dat1$body_text<-socmed_correct(dat1$body_text,pth_AE)
+# 
+# dat1$post_titles<-socmed_correct(dat1$post_titles,pth_AE)
+# dat1$body_text<-socmed_correct(dat1$body_text,pth_AE)
+# 
+# dat1$post_titles<-socmed_correct(dat1$post_titles,pth_terms)
+# dat1$body_text<-socmed_correct(dat1$body_text,pth_terms)
+# 
+# pth2<-"/Users/AndyC/Dropbox/rdata/RCCsocmed/RCC_SM_analysis_24022017/final_data/cleaned_all_data_08032017"
+# saveRDS(dat1,pth2)
 
-saveRDS(dat1,"cleaned_all_data_24022017")
 ```
 
-First produce some rpeliminary desriptives. The total numebr of users is `r length(unique(dat1$username))`. The total number of posts available is `r nrow(dat1)`  and the total numebr of posts per site is as follows:
 
 ```{r}
-dat1<-readRDS("cleaned_all_data_24022017")
-dat1$post_date<-as.Date(dat1$post_date)
-dat1$days_age<-as.numeric(dat1$post_date-as.Date("2017-02-24"))
+pth2<-"/Users/AndyC/Dropbox/rdata/RCCsocmed/RCC_SM_analysis_24022017/final_data/cleaned_all_data_08032017"
+
+dat1<-readRDS(pth2)
+```
+
+First we produce some preliminary desriptives. The total numebr of users is `r length(unique(dat1$username))`. The total number of posts available is `r nrow(dat1)`  and the total number of posts per site is as follows:
+
+```{r}
+dat1$post_date<-as.Date(dat1$post_date,format="%d/%m/%Y")
+dat1$days_age<-as.numeric(dat1$post_date-as.Date("24/02/2017",format="%d/%m/%Y"))
 
 table(dat1$site)
 ```
-The total number of posts over time  adn by site is shown in figure 1a and b  below:
+The total number of posts over time and by site is shown in figure 1a and b  below:
 
 ```{r}
-year1<-as.numeric(format(dat1$post_date,"%Y"))
+year1<-as.numeric( substr(as.character(dat1$post_date),1,4))
+
 yearsums<-table(year1)[-length(table(year1))]
-plot(as.numeric(names(yearsums)),as.numeric(unname(yearsums)),type="line",col="red",xlab="Year",ylab="Numer of Posts")
+
+# plot(as.numeric(names(yearsums)),as.numeric(unname(yearsums)),type="line",col="red",xlab="Year",ylab="Numer of Posts")
 
 temp1<-data.frame(years=year1,site=dat1$site)
 temp1<-table(temp1$years,temp1$site)
 temp1<-temp1[-nrow(temp1),]
 
-plot(as.numeric(rownames(temp1)),as.numeric(unname(temp1[,2])),type="line",col="red",xlab="Year",ylab="Numer of Posts")
+plot(as.numeric(rownames(temp1)),as.numeric(unname(temp1[,2])),type="line",col="red",xlab="Year",ylab="Number of Posts")
 lines(as.numeric(rownames(temp1)),as.numeric(unname(temp1[,1])),col="blue")
 lines(as.numeric(rownames(temp1)),as.numeric(unname(temp1[,3])),col="green")
 lines(as.numeric(rownames(temp1)),as.numeric(unname(temp1[,4])),col="black")
@@ -71,7 +133,7 @@ lwd=c(2.5,2.5,2.5,2.5),col=c("red","blue","green","black"))
 ```
 
 ```{r}
-bios<-readRDS("/Users/AndyC/Dropbox/rdata/RCCsocmed/daily_strength_Kidney_Cancer_user_bios_230117")
+bios<-readRDS("daily_strength_Kidney_Cancer_user_bios_230117")
 
 bios$age<-gsub(" Age: ","",bios$age)
 bios$age<-gsub("Private","0",bios$age)
@@ -88,22 +150,18 @@ gender<-bios$gender[bios$gender!="Private"]
 p_female<-round(length(gender[gender=="Female "])/length(gender)*100,1)
 gender_n<-length(gender)
 ```
-Using only the data from Daily Strength, posters had a mean age of `r paste0(round(mn_age,1)," (95 percentiles ",round(unname(ci[1]),1),"~",round(unname(ci[2]),1),": n= ",age_n,")")` and most posters were female `r paste0(p_female,"% (n= ",gender_n,")")`.
+Post in general contained little metadata available wihtout registering. No site showed the number of views fo a post, most sites did not show geographical location, age or gender.Using only the data from the Daily Strength site, posters had a mean age of `r paste0(round(mn_age,1)," (95 percentiles ",round(unname(ci[1]),1),"~",round(unname(ci[2]),1),": n= ",age_n,")")` and most posters were female `r paste0(p_female,"% (n= ",gender_n,")")`.
 
-##Description of Post Title N-Grams
-In these analyses stopwords are removed and repeats of post titles are retained
-```{r}
+##N-Grams from Post Titles
+In the n-gram analyses of post titles. stopwords are removed and repeats of post titles are retained
+
+```{r eval=TRUE}
 #tidy workspace
-rm("bios","yearsums","age","age_n","site","temp1","year1","ci","gender","mn_age","gender_n","p_female","p_male","datDStr")
 
-library(quanteda)
-library(ggplot2)
 
 ttls1<-dat1$post_titles
-
 myCorpus0 <- corpus(ttls1) 
 myCorpus0<-toLower(myCorpus0, keepAcronyms = TRUE)
-
 
 ######
 ngrams <-dfm(myCorpus0, ngrams = 1, verbose = TRUE, toLower = TRUE,
@@ -121,10 +179,12 @@ wds1$freq<-as.numeric(wds1$freq)
 ggplot(wds1[1:30,], aes(reorder(word, freq),freq)) +
   geom_bar(stat = "identity") + coord_flip() +
   xlab("Words") + ylab("Frequency") +
-  ggtitle("Most frequent Words")
+  ggtitle("Most Frequent Words From Titles")
 
-saveRDS(wds1,"n_grams1_titles24022017")
 
+saveRDS(wds1,"n_grams1_titles_02032017")
+
+write.table(wds1, file="n_grams1_titles02032017.csv", sep = ",",col.names=FALSE, row.names = FALSE, na="NA", qmethod = "double",fileEncoding="UTF-8") 
 ######
 ngrams <-dfm(myCorpus0, ngrams = 2, verbose = TRUE, toLower = TRUE,
   removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
@@ -140,7 +200,7 @@ saveRDS(wds2,"n_grams2_titles24022017")
 ggplot(wds2[1:30,], aes(reorder(word, freq),freq)) +
   geom_bar(stat = "identity") + coord_flip() +
   xlab("Words") + ylab("Frequency") +
-  ggtitle("Most frequent 2-Grams")
+  ggtitle("Most Frequent 2-Grams From Titles")
 ######
 ngrams <-dfm(myCorpus0, ngrams = 3, verbose = TRUE, toLower = TRUE,
   removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
@@ -156,7 +216,7 @@ saveRDS(wds3,"n_grams3_titles24022017")
 ggplot(wds3[1:30,], aes(reorder(word, freq),freq)) +
   geom_bar(stat = "identity") + coord_flip() +
   xlab("Words") + ylab("Frequency") +
-  ggtitle("Most frequent 3-Grams")
+  ggtitle("Most frequent 3-Grams From Titles")
 ######
 ngrams <-dfm(myCorpus0, ngrams = 4, verbose = TRUE, toLower = TRUE,
   removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
@@ -171,7 +231,855 @@ wds4$freq<-as.numeric(wds4$freq)
 saveRDS(wds4,"n_grams2_titles24022017")
 
 
-#Analyses of the titles
-x<-sort(table(dat1$post_titles),decreasing=T)
-y<-data.frame(topics=names(x),freq=unname(x))[,-2]
+```
+#Analysis of Post Titles - Most Frequent Topics
+(TBD/In progress)
+```{r}
+
+
+
+```
+
+
+##N-Grams of Posts
+
+```{r }
+
+#tidy workspace
+
+
+posts1<-dat1$body_text
+myCorpus0 <- corpus(posts1) 
+myCorpus0<-toLower(myCorpus0, keepAcronyms = TRUE)
+
+######
+ngrams <-dfm(myCorpus0, ngrams = 1, verbose = TRUE, toLower = TRUE,
+             removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
+             removeTwitter = TRUE, stem = FALSE,ignoredFeatures=stopwords("english"))
+
+allwds_freq<-sort(colSums(ngrams),decreasing=T)
+
+wds1<-data.frame(cbind(names(allwds_freq),allwds_freq),stringsAsFactors =FALSE)
+rownames(wds1)<-NULL
+colnames(wds1)<-c("word","freq")
+wds1$freq<-as.numeric(wds1$freq)
+# 
+
+ggplot(wds1[1:30,], aes(reorder(word, freq),freq)) +
+  geom_bar(stat = "identity") + coord_flip() +
+  xlab("Words") + ylab("Frequency") +
+  ggtitle("Most frequent Post Words")
+
+
+saveRDS(wds1,"n_grams1_posts_02032017")
+
+write.table(wds1, file="n_grams1_posts02032017.csv", sep = ",",col.names=FALSE, row.names = FALSE, na="NA", qmethod = "double",fileEncoding="UTF-8") 
+######
+ngrams <-dfm(myCorpus0, ngrams = 2, verbose = TRUE, toLower = TRUE,
+             removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
+             removeTwitter = TRUE, stem = FALSE,ignoredFeatures=stopwords("english"))
+
+allwds_freq<-sort(colSums(ngrams),decreasing=T)
+
+wds2<-data.frame(cbind(names(allwds_freq),allwds_freq),stringsAsFactors =FALSE)
+rownames(wds2)<-NULL
+colnames(wds2)<-c("word","freq")
+wds2$freq<-as.numeric(wds2$freq)
+wds2<-wds2[-c(2,8,13,14,22,27:29,57,63,64),]########################cleaning HTML terms
+saveRDS(wds2,"n_grams2_posts24022017")
+ggplot(wds2[1:30,], aes(reorder(word, freq),freq)) +
+  geom_bar(stat = "identity") + coord_flip() +
+  xlab("Words") + ylab("Frequency") +
+  ggtitle("Most frequent Post 2-Grams")
+######
+ngrams <-dfm(myCorpus0, ngrams = 3, verbose = TRUE, toLower = TRUE,
+             removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
+             removeTwitter = TRUE, stem = FALSE,ignoredFeatures=stopwords("english"))
+
+allwds_freq<-sort(colSums(ngrams),decreasing=T)
+
+wds3<-data.frame(cbind(names(allwds_freq),allwds_freq),stringsAsFactors =FALSE)
+rownames(wds3)<-NULL
+colnames(wds3)<-c("word","freq")
+wds3$freq<-as.numeric(wds3$freq)
+#Remove html markup terms
+rmv<-read.csv("remove_html_markup_dict.csv",header=FALSE,sep=",")
+for(i in 1:nrow(rmv))wds3<-wds3[!(wds3$word==rmv[i,1]),]
+
+wds3<-wds3[-c(1:12,18:24,27:34,41:43,49,54,62:70),]########################cleaning HTML terms
+saveRDS(wds3,"n_grams3_posts24022017")
+ggplot(wds3[1:30,], aes(reorder(word, freq),freq)) +
+  geom_bar(stat = "identity") + coord_flip() +
+  xlab("Words") + ylab("Frequency") +
+  ggtitle("Most frequent Post 3-Grams ")
+```
+
+```{r eval=FALSE}
+######
+ngrams <-dfm(myCorpus0, ngrams = 4, verbose = TRUE, toLower = TRUE,
+             removeNumbers = TRUE, removePunct = TRUE, removeSeparators = TRUE,
+             removeTwitter = TRUE, stem = FALSE,ignoredFeatures=stopwords("english"))
+
+allwds_freq<-sort(colSums(ngrams),decreasing=T)
+
+wds4<-data.frame(cbind(names(allwds_freq),allwds_freq),stringsAsFactors =FALSE)
+rownames(wds4)<-NULL
+colnames(wds4)<-c("word","freq")
+wds4$freq<-as.numeric(wds4$freq)
+
+#Remove html markup terms
+rmv<-read.csv("remove_html_markup_dict.csv",header=FALSE,sep=",")
+for(i in 1:nrow(rmv))wds4<-wds4[grep(rmv[i,1],wds4[,1],invert=TRUE),]
+
+saveRDS(wds4,"n_grams2_posts24022017")
+
+
+```
+##Look at rate of the mean number of mentions per day of treatments
+IN this analysis we determine the numebr of metions of different treatments and the date of the forst mention of that treatment.
+A mean rate of mentions per day was then calculated to show how frequently different treatments were mentioned allowing for the different lengths of time each drug or treatment has been available
+
+```{r}
+#declare a function
+reduce_to_word_list<-function(x,dict_pth1,n_top_features=50,add_dict_wds=character()){
+  #Function accets a character vector of text and removes any words not in the dictionary of words supplied. Outputs table of most freq words and Doc Feature Matrix (Tdm)
+#First standardise mark and replace AE terms
+temp_dict<-read.delim(dict_pth1,sep=",",stringsAsFactors=F)
+temp_dict<-temp_dict[,2]
+temp_dict<-c(temp_dict,add_dict_wds)
+#############################################################
+#Create a doc term matrix
+#############################################################
+#use this code to remoive all words but
+dfm1<-dfm(posts1, keptFeatures = temp_dict, verbose = TRUE)
+Nwords<-posts1
+Nposts<-length(posts1)
+#remove terms appearing with frequency  of less than  0.01%
+dfm2<-topfeatures(dfm1, n_top_features,decreasing=TRUE)
+return(dfm2)
+}
+```
+
+
+```{r}
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/drug_names/drug_name_standardisation_dict_02032017.csv"
+temp_dict<-read.delim(pth1,sep=",",stringsAsFactors=F)
+
+temp_dict$first_mention<-numeric(nrow(temp_dict))
+for(i in 1:nrow(temp_dict)){
+#First need to get days since forst methion of each treatment
+fst_date1<-tail(sort(as.Date(dat1$post_date[grep(temp_dict[i,2],dat1$body_text)],"%d/%m/%Y"),decreasing=TRUE),1)
+if(length(fst_date1)==0)fst_date1<-as.Date("2017-03-01")
+if(length(fst_date1)!=0)temp_dict$first_mention[i]<-as.numeric(as.Date("2017-03-01")-fst_date1)
+}
+
+first_drug_mentions<-temp_dict[,c(2,4)]
+
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+
+dfm2<-reduced1
+temp_dict$rate<-numeric(nrow(temp_dict))
+for(i in 1:nrow(temp_dict)){
+  temp<-round(dfm2[names(dfm2)==temp_dict$corrected[i]]/temp_dict$first_mention[i],5)
+if(length(temp)==0)temp<-0
+if(length(temp)!=0)temp_dict$rate[i]<-temp
+}
+
+temp_dict<-temp_dict[order(temp_dict$rate,decreasing=TRUE),]
+
+dt1<-data.frame(corrected=temp_dict$corrected,rate=temp_dict$rate)
+ggplot(dt1, aes(reorder(corrected, rate),rate)) +
+  geom_bar(stat = "identity") + coord_flip() +
+  xlab("Treatments") + ylab("Frequency") +
+  ggtitle("Mentions For RCC Treatments (Average Mentions per Day)")
+```
+The results show that by for the most frequently discussed drug is Sunitinib with a mean rate of over 4 mentions per day. The next most frequently mentioned drug is Temsirolimus, mentioned at just over once every two days.
+
+##Associations of AEs and symptoms by Treatment from Posts
+In these analyses we looked first subgrouped the posts by mention of a particular drug and loogend at the number of mentions of any of up to 6,000 adverse events. This helps to characterise which adverse events are associated wiht the drug. However, there is likely to be a degree of bleed over from other treatmetns that are associated wiht the drug in question.
+```{r}
+library(tm)
+library(igraph)
+library(quanteda)
+
+posts1<-dat1$body_text
+posts1<-posts1[grep("sunitinib",posts1)]
+```
+
+
+###Wordcloud Showing the Adverse Events Associated wiht Sunitinib
+```{r}
+#rm(list=(ls()[ls()!="dat1"])) # Remove everything but dat1
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" sunitinib ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+
+sunitinib_aes<-words
+sunitinib_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="sunitinib"])
+sunitinib_aes$rate<-round(sunitinib_aes$freq/sunitinib_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+# 
+# x<-1:ncol(dfm1)
+# sel<-x[dfm1@Dimnames$features%in%trms1]
+# 
+# #m <- if (inherits(dfm1, "TermDocumentMatrix")) t(dtm2) else dtm2
+#     m <- as.matrix(dfm1[, sel])
+#     c <- cor(m)
+#     corThreshold<-0.095
+#     c[c < corThreshold] <- 0
+#     c[is.na(c)] <- 0
+#     diag(c) <- 0
+# 
+# g <- graph.adjacency(c, weighted=TRUE, mode="lower")
+# #Remove Loops
+# g<-simplify(g)
+# #set labels and degrees of vertices
+# V(g)$label<-V(g)$name
+# V(g)$degree<-degree(g)
+# #set seed to make layout reproducible
+# set.seed(42)
+# #layout1<-layout.fruchterman.reingold(g)
+# #layout1<-layout.reingold.tilford(g, circular=T)#*****
+# #layout1<-layout.reingold.tilford(g)
+# layout1<-layout.circle(g)#**
+# #layout1<-layout.sphere(g)#*
+# #layout1<-layout.random(g)
+# #layout1<-layout.fruchterman.reingold(g)
+# #layout1<-layout.kamada.kawai(g)#***
+# #layout1<-layout.lgl(g)
+# #layout1<-layout.svd(g)
+# #layout1<-layout_as_star(g, center = V(g)[1], order = NULL)
+# ############################
+# V(g)$label.cex <- 2.2 * V(g)$degree / max(V(g)$degree)+ .2
+# V(g)$label.color <- rgb(0, 0, .2, .8)
+# V(g)$color <- "white"
+# V(g)$frame.color <- "white"
+# #egam <- (log(E(g)$weight)+.4) / max(log(E(g)$weight)+.4)
+# mag=2
+# egam <- E(g)$weight*mag / max(E(g)$weight)*mag
+# E(g)$color <- rgb(.5, 0.5, 0, egam/max(egam))#Problem 'Error in rgb(0.5, 0.5, 0, egam) : alpha level -0.684402, not in [0,1]
+# E(g)$width <- egam
+# # plot the graph in layout1
+# plot(g, layout=layout1,main= "Association Between Main Side Effects Found for Sunitinib" )
+# 
+# #interactive layout
+# #tkplot(g)
+
+```
+
+###Wordcloud Showing the Adverse Events Associated with Surgery
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+dict_pth<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/RCC_specific/RCCsurgery_dict.csv"
+temp_dict<-read.delim(dict_pth,sep=",",stringsAsFactors=F)[,1]
+
+posts1<-character()
+for(i in 1:length(temp_dict))posts1<-c(posts1,dat1$body_text[grep(temp_dict[i],dat1$body_text)])
+
+reduced1<-reduce_to_word_list(posts1,pth1,n_top_features=50,add_dict_wds=c("bulge","disonfort","disomfort","denervtion","denervated"))
+
+dfm2<-reduced1
+
+dfm2<-dfm2[!(names(dfm2)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+
+surgery_aes<-words
+surgery_first<-5475
+surgery_aes$rate<-round(surgery_aes$freq/surgery_first,4)
+
+xxx<-surgery_aes$word
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Temsirolimus
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" temsirolimus ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+tems_aes<-words
+tems_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="temsirolimus"])
+tems_aes$rate<-round(tems_aes$freq/tems_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Sorafenib
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" sorafenib ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+sorafenib_aes<-words
+sorafenib_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="sorafenib"])
+sorafenib_aes$rate<-round(sorafenib_aes$freq/sorafenib_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Axitinib
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" axitinib ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+axitinib_aes<-words
+axitinib_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="axitinib"])
+axitinib_aes$rate<-round(axitinib_aes$freq/axitinib_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+###Wordcloud Showing the Adverse Events Associated wiht Pazopanib
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" pazopanib ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+pazopanib_aes<-words
+pazopanib_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="pazopanib"])
+pazopanib_aes$rate<-round(pazopanib_aes$freq/pazopanib_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Everolimus
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" everolimus ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+everolimus_aes<-words
+everolimus_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="everolimus"])
+everolimus_aes$rate<-round(everolimus_aes$freq/everolimus_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Interleukin
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" interleukin ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+interleukin_aes<-words
+interleukin_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="interleukin"])
+interleukin_aes$rate<-round(interleukin_aes$freq/interleukin_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Bevacizumab
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" bevacizumab ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+bevacizumab_aes<-words
+bevacizumab_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="bevacizumab"])
+bevacizumab_aes$rate<-round(bevacizumab_aes$freq/bevacizumab_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+###Wordcloud Showing the Adverse Events Associated wiht Nivolumab
+```{r}
+#########################
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" nivolumab ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+dfm2<-reduced1[!(names(reduced1)%in%c("renal_cell_carcinoma","cancer","kidney_cancer","metastases"))]
+
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+trms1<-names(dfm2)
+words<-data.frame(word=trms1,freq=dfm2)
+nivolumab_aes<-words
+nivolumab_first<-as.numeric(first_drug_mentions$first_mention[first_drug_mentions$corrected=="nivolumab"])
+nivolumab_aes$rate<-round(nivolumab_aes$freq/nivolumab_first,4)
+
+library("wordcloud")
+library("RColorBrewer")
+set.seed(42)
+wordcloud(words = words$word, freq = words$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+##########################################################
+#########################################################
+```
+
+From the wordcloud we can see there is significant 'contamination' pof the assocaited adverse events with AE's we would expect to be associated with surgery.  It is possible to remove these particular words to revise the wordclouds.
+
+#Alternate Presentation of the Associations Between Treatments and Advese Events
+In these analyses we take a more holistic approach, and the information in the form of heatmaps, using as metrics rate of metnions, sentiment and finally a scoring of the degree of fear realted wordsin the language used.
+
+```{r include=TRUE}
+#combine the ae profiles of the drugs
+nms<-sort(unique(c(sunitinib_aes$word,xxx,sorafenib_aes$word,axitinib_aes$word,tems_aes$word,
+                   pazopanib_aes$word,everolimus_aes$word,interleukin_aes$word,bevacizumab_aes$word,nivolumab_aes$word)))
+
+ae_profiles<-data.frame(ae=nms,sunitinib=numeric(length(nms)),surgery=numeric(length(nms)),sorafenib=numeric(length(nms)),
+           axitinib=numeric(length(nms)),temsirolimus=numeric(length(nms)),pazopanib=numeric(length(nms)),everolimus=numeric(length(nms)),interleukin=numeric(length(nms)),bevacizumab=numeric(length(nms)),nivolumab=numeric(length(nms)))
+
+# sunitinib
+for(i in 1:nrow(sunitinib_aes))ae_profiles[ae_profiles$ae==sunitinib_aes$word[i],"sunitinib"]<-sunitinib_aes$rate[i]
+
+# surgery
+for(i in 1:nrow(surgery_aes))ae_profiles[ae_profiles$ae==surgery_aes$word[i],"surgery"]<-surgery_aes$rate[i]
+# sorafenib
+for(i in 1:nrow(sorafenib_aes))ae_profiles[ae_profiles$ae==sorafenib_aes$word[i],"sorafenib"]<-sorafenib_aes$rate[i]
+
+# axitinib
+for(i in 1:nrow(axitinib_aes))ae_profiles[ae_profiles$ae==axitinib_aes$word[i],"axitinib"]<-axitinib_aes$rate[i]
+
+# tems
+for(i in 1:nrow(tems_aes))ae_profiles[ae_profiles$ae==tems_aes$word[i],"temsirolimus"]<-as.numeric(tems_aes$rate[i])
+#######
+# pazopanib
+for(i in 1:nrow(pazopanib_aes))ae_profiles[ae_profiles$ae==pazopanib_aes$word[i],"pazopanib"]<-as.numeric(pazopanib_aes$rate[i])
+
+# everolimus
+for(i in 1:nrow(everolimus_aes))ae_profiles[ae_profiles$ae==everolimus_aes$word[i],"everolimus"]<-as.numeric(everolimus_aes$rate[i])
+
+# interleukin
+for(i in 1:nrow(interleukin_aes))ae_profiles[ae_profiles$ae==interleukin_aes$word[i],"interleukin"]<-as.numeric(interleukin_aes$rate[i])
+
+# bevacizumab
+for(i in 1:nrow(bevacizumab_aes))ae_profiles[ae_profiles$ae==bevacizumab_aes$word[i],"bevacizumab"]<-as.numeric(bevacizumab_aes$rate[i])
+
+# nivolumab
+for(i in 1:nrow(nivolumab_aes))ae_profiles[ae_profiles$ae==nivolumab_aes$word[i],"nivolumab"]<-as.numeric(nivolumab_aes$rate[i])
+
+
+ae_nms<-ae_profiles[,1]
+ae_profiles1<-ae_profiles[,-1]
+drg_nms<-colnames(ae_profiles1)
+
+sz<-nrow(ae_profiles1)*ncol(ae_profiles1)
+df1<-data.frame(drug=character(sz),ae=character(sz),rate=numeric(sz))
+cnt=1
+for(r in 1:nrow(ae_profiles1)){
+  for(c in 1:ncol(ae_profiles1)){
+    df1[cnt,1]<-drg_nms[c]
+    df1[cnt,2]<-ae_nms[r]
+    df1[cnt,3]<-ae_profiles1[r,c]
+    cnt=cnt+1
+  }
+}
+
+#Determine the drug wiht the highest rate of mentions of any AE
+#Needed to order the eventual plot
+df3<-df1[,-2]
+ord<-aggregate(formula=df3$rate~df3$drug,FUN="sum",data=df3)
+colnames(ord)<-c("drug","rate")
+ord<-ord[order(ord$rate,decreasing=TRUE), ]
+
+#Determine the AE wiht the highest rate of mentions across drugs
+#Needed to order the eventual plot
+df3<-df1[,-1]
+ord1<-aggregate(formula=df3$rate~df3$ae,FUN="sum",data=df3)
+colnames(ord1)<-c("ae","rate")
+ord1<-ord1[order(ord1$rate,decreasing=TRUE), ]
+
+#Plot the results in a heatmap
+
+#order the heatmap by highest rates row and column order
+ae_profiles1<-ae_profiles1[,ord$drug]
+ae_profiles1<-ae_profiles1[ord1$ae,]
+```
+
+###Heatmap Showing the Rate of mentions of AE's for Different Treatments
+The interactive heatmap shows the rate of mentions per day of different adverse events for ten different RCC treatments. The plot is interactive; by hovering the cursor over a particular segment the drug name, adverse event and the rate of mentioned per day can be seen. (Rates of mentions above 0.08 per day are grouped into a single band for clarity of plotting [46 mentions ranging 0.08 to 1.4])
+The plot is arranged so that the treatment most stongly assocaited wiht adverse events is toward the top of the graphic and the adverse events wiht strongest associations with the treatments are listed wiht toward the left.
+```{r}
+library(d3heatmap)
+library(scales)
+ncls<-8
+cls<- c(brewer.pal(ncls, "OrRd") )
+cls<- c(brewer.pal(ncls, "Reds") )
+#cls<- c(brewer.pal(ncls, "BuGn") )
+
+mx_rate<-0.08
+ae_profiles1<-ae_profiles[,-1]
+rownames(ae_profiles1)<-ae_profiles[,1]
+ae_profiles1[ae_profiles1>mx_rate]<-mx_rate
+ae_profiles1<-ae_profiles1[,ord$drug]
+ae_profiles1<-ae_profiles1[ord1$ae,]
+ae_profiles11<-t(ae_profiles1)
+d3heatmap(ae_profiles11, scale = "none",colors=cls,dendrogram="none",cexCol=0.5,cexRow=0.8)
+
+############################################################
+#Alternative plot
+# 
+# ####Need to now order the columns by the order of the drugs
+# #Limit the highest mentions to improve plot resolution
+# df2<-df1
+# df2$rate[df2$rate>0.3]<-0.3
+# df2$ae<-as.factor(df2$ae)
+# df2$drug<-as.factor(df2$drug)
+# 
+# df2$drug <- factor(df2$drug, levels = ord$drug)
+# df2$ae <- factor(df2$ae, levels = ord1$ae)
+# # Define the color palette to be used in the hetmap
+# LtoM <-colorRampPalette(c('red', 'yellow' ))            # The spectrum of colors for the lowest returns
+# Mid <- "snow3"                                          # Snow3 is the color for the (approximatedly) median value
+# MtoH <-colorRampPalette(c('lightgreen', 'darkgreen'))   # The spectrum of colors for the highest values
+# 
+# 
+# 
+# require(ggplot2)                                                            # Load ggplot2      
+# hm <- ggplot(data=df2, aes(x = ae, y = drug, fill=rate)) + geom_raster()                        # Draw the heatmap using geom_raster()
+# hm <- hm + scale_fill_gradient2(low=LtoM(20), mid=Mid, high=MtoH(20))     # Colors, please!
+# hm <- hm + ggtitle(label='Mentions of Adverse Events for RCC Treatments (per Day)')  # Add a title
+# hm<-hm + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# print(hm)                                                                      # Print out the heatmap on the screen
+```
+Fromt the graphic presentation of the data we are able to see that Adverse events are most frequently mentioned wiht surgery.
+The most frequently mentioned side effects for surgery include; Pain, bleeding, mass, soreness, fatigue and tiredness, sleeping, nausea, coughing, swelling and complications. In additon fear, stress, shock adn anxiety are also strongly assocaited wiht surgery.
+Sunitinib also had strong assocaitions wiht adverse events, ignoring those that are most likely to be associated with surgery, the most commonly mentioned were; Fatigue / tiredness, nausea, sick, diarrhea and taste. Bevacizumab and Nivolumab were least likely to be associated with adverse events.
+
+##Heatmap Showing the Sentiment of AE's for Different Treatments
+
+```{r}
+library(syuzhet)
+treats<-colnames(ae_profiles1)
+aes1<-rownames(ae_profiles1)
+sent1<-ae_profiles11
+sent1[sent1>=0]<-0
+sent_fear<-sent1
+
+for(t in 1:length(treats)){#rows
+  for(a in 1:length(aes1)){#Columns
+    posts2<-posts1[unique(c(grep(treats[t],posts1),grep(aes1[a],posts1)))]
+    temp<-get_nrc_sentiment(posts2)
+    sent1[t,a]<-mean(c(temp$positive,-temp$negative))
+    sent_fear[t,a]<-mean(temp$fear)
+  }
+}
+
+ncls<-20
+cls<- c(brewer.pal(ncls, "OrRd") )
+cls<- c(brewer.pal(ncls, "Reds") )
+#cls<- c(brewer.pal(ncls, "BuGn") )
+
+#mx_rate<-0.08
+
+
+#ae_profiles1[ae_profiles1>mx_rate]<-mx_rate
+# ae_profiles1<-ae_profiles1[,ord$drug]
+# ae_profiles1<-ae_profiles1[ord1$ae,]
+# ae_profiles11<-t(ae_profiles1)
+
+d3heatmap(sent1, scale = "none",colors=cls,dendrogram="none",cexCol=0.5,cexRow=0.8)
+
+
+```
+To Be Discussed
+
+###Heatmap Showing Fear Sentiment of AE's for Different Treatments
+
+```{r}
+d3heatmap(sent_fear, scale = "none",colors=cls,dendrogram="none",cexCol=0.5,cexRow=0.8)
+
+```
+To Be Discussed
+
+##Analysis Idea
+Possibly to apply machine learning to determine which adverse events particularly differentiate a given treatmetn from the rest. This would give a slightly different perspective, and more characterise those that are only assocaited with that treatment above the others.
+
+
+#Sentiment Analyses
+
+###Boxplot Showing the Sentiment in Posts Mentioning given Treatments
+```{r}
+library(syuzhet)
+treats<-colnames(ae_profiles1)
+aes<-rownames(ae_profiles1)
+sent2<-list()
+sent_fear2<-list()
+
+for(t in 1:length(treats)){#rows
+    posts2<-posts1[grep(treats[t],posts1)]
+    temp<-get_nrc_sentiment(posts2)
+    sent2[[t]]<-c(temp$positive,-temp$negative)
+    sent_fear2[[t]]<-temp$fear
+}
+names(sent2)<-treats
+names(sent_fear2)<-treats
+
+
+boxplot(sent2,outline=FALSE,notch=TRUE,main="Sentiment Scores fro RCC Treatments")
+abline(h = 0,col="red")
+```
+Sentiment in socail media posts is generally balanced and overall rarely varies from neutral (A score of zero), in this case we can see that surgery overall has a mean negative score, Bevacizumab also has a slightly negative mean sentiment score. Axitinib abd Temsirolimus are the only treatments wiht a mean postive scoring. All otehr treatments showed a mean neutral score.  Further more detailed investigation may be required to understand these patterns and discussions are frequently polarised or different before, after or during treatment.
+
+###Boxplot Showing Fear Sentiment in Posts Mentioning given Treatments
+```{r}
+boxplot(sent_fear2,outline=FALSE,notch=TRUE,main="Fear Sentiment Scores fro RCC Treatments")
+```
+The greatest Fear Sentiment scor was assocaited wiht surgery followd by Sunitib=nib and Pazopanib. Nivolumab and Temsirolimus showed the lowest mean scores for fear sentiment. Thsi analysis amy be worthwhile splitting into before and after categories if possible
+
+
+##Sentiment Over Time Overall for all Posts
+
+```{r}
+
+#Sentiment analysis of RCC social media posts#
+# by Evie Merinopoulou @ evidera
+
+#clean space
+#rm(list = ls())
+#load packages
+library(tm)
+library(plyr)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+library(gplots)
+
+#read in data
+alldat<-dat1
+alldat$year<- format(as.Date(alldat$post_date,"%Y-%m-%d"), "%Y")
+
+#leave out data from 2017 or with NA as date
+alldat<-alldat[alldat$year!=2017,]
+alldat<-alldat[!is.na(alldat$post_date), ]
+
+#load in dictionaries from Hu & Liu
+
+pos.words<-scan('/Users/AndyC/Dropbox/rdata/text_analysis_ref/sentiment_lex/positive_words.txt', what='character', comment.char=';')
+neg.words<-scan('/Users/AndyC/Dropbox/rdata/text_analysis_ref/sentiment_lex/negative_words.txt', what='character', comment.char=';')
+
+#score function
+score.sentiment = function(sentences, pos.words, neg.words, .progress='none')
+{
+        require(plyr)
+        require(stringr)
+        
+        # we got a vector of sentences. plyr will handle a list
+        # or a vector as an "l" for us
+        # we want a simple array ("a") of scores back, so we use 
+        # "l" + "a" + "ply" = "laply":
+        scores = laply(sentences, function(sentence, pos.words, neg.words) {
+                
+                # clean up sentences with R's regex-driven global substitute, gsub():
+                sentence = gsub('[[:punct:]]', '', sentence)
+                sentence = gsub('[[:cntrl:]]', '', sentence)
+                sentence = gsub('\\d+', '', sentence)
+                # and convert to lower case:
+                sentence = tolower(sentence)
+                
+                # split into words. str_split is in the stringr package
+                word.list = str_split(sentence, '\\s+')
+                # sometimes a list() is one level of hierarchy too much
+                words = unlist(word.list)
+                
+                # compare our words to the dictionaries of positive & negative terms
+                pos.matches = match(words, pos.words)
+                neg.matches = match(words, neg.words)
+                
+                # match() returns the position of the matched term or NA
+                # we just want a TRUE/FALSE:
+                pos.matches = !is.na(pos.matches)
+                neg.matches = !is.na(neg.matches)
+                
+                # and conveniently enough, TRUE/FALSE will be treated as 1/0 by sum():
+                score = sum(pos.matches) - sum(neg.matches)
+                
+                return(score)
+        }, pos.words, neg.words, .progress=.progress )
+        
+        scores.df = data.frame(score=scores, text=sentences)
+        return(scores.df)
+}
+
+
+#set vector of sentiment scores
+scores<-score.sentiment(alldat$body_text, pos.words, neg.words)
+
+#apend scores to dataframe
+alldat$sentiment<-scores[,1]
+
+#get table of means
+means <- aggregate(sentiment ~  year, alldat, mean)
+meansSD<-ddply(alldat,~year,summarise,mean=mean(sentiment),sd=sd(sentiment)) #means and SD
+```
+###Mean Overall Sentiment of Posts By Year
+```{r}
+#line of mean sentiment by year
+ggplot(means, aes(x=year, y=sentiment, group=1)) + geom_line() + geom_point()
+
+#create boxplots of means by year
+#boxplot<-ggplot(data=alldat, aes(x=year, y=sentiment, fill=year)) + geom_boxplot() +
+ #       stat_summary(fun.y=mean, colour="darkred", geom="point", 
+ #                    shape=5, size=3,show.legend = FALSE) 
+
+
+#create line of mean sentiment by year
+#plotmeans(sentiment ~ year, data = alldat, frame = FALSE, n.label =FALSE )
+
+```
+
+###Mean Postive, Negative and Neutral Sentiment by Year
+```{r}
+#below code is for plotting number of negative/positive/neutral posts over time
+stat <- scores
+stat$year <- alldat$year
+
+stat <- mutate(stat, post=ifelse(stat$score > 0, 'positive', ifelse(stat$score < 0, 'negative', 'neutral')))
+by.post <- group_by(stat, post, year)
+by.post <- summarise(by.post, number=n())
+
+ggplot(by.post, aes(year, number)) + geom_line(aes(group=post, color=post), size=2) +
+        geom_point(aes(group=post, color=post), size=2) +
+        theme(text = element_text(size=12), axis.text.x = element_text(angle=90, vjust=1))
+
+#test
+#ggplot(means, aes(means$year, means$sentiment) ) +
+ #       geom_point() + geom_smooth()
+
+
+```
+
+
+
+```{r, eval=FALSE}
+
+pth1<-"/Users/AndyC/Dropbox/rdata/text_analysis_ref/Adverse_Events/adverse_events_dict_std.csv"
+
+posts1<-dat1$body_text[grep(" sunitinib ",dat1$body_text)]
+reduced1<-reduce_to_word_list(posts1,pth1)
+
+
+
 ```
